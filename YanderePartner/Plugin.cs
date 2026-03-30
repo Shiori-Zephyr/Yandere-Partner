@@ -16,7 +16,6 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] public static IDutyState DutyState { get; private set; } = null!;
     [PluginService] public static IFramework Framework { get; private set; } = null!;
     [PluginService] public static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
-    [PluginService] public static IFlyTextGui FlyTextGui { get; private set; } = null!;
     [PluginService] public static IPartyList PartyList { get; private set; } = null!;
     [PluginService] public static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] public static IGameInteropProvider GameInterop { get; private set; } = null!;

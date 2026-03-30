@@ -1,14 +1,16 @@
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.ClientState.Conditions;
-using Dalamud.Game.Gui.FlyText;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 using FFXIVClientStructs.FFXIV.Client.Game.Event;
 using FFXIVClientStructs.FFXIV.Client.Game.Fate;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using FFXIVClientStructs.FFXIV.Common.Math;
 using Lumina.Excel.Sheets;
 
 namespace YanderePartner;
@@ -40,6 +42,12 @@ public unsafe class EventWatcher : IDisposable
     private delegate void UpdateGearsetDelegate(nint raptureGearsetModule, int gearsetId);
     private Hook<UpdateGearsetDelegate>? updateGearsetHook;
 
+    private unsafe delegate void ReceiveActionEffectDelegate(
+        uint casterEntityId, Character* casterPtr, Vector3* targetPos,
+        ActionEffectHandler.Header* header, ActionEffectHandler.TargetEffects* effects,
+        GameObjectId* targetEntityIds);
+    private Hook<ReceiveActionEffectDelegate>? actionEffectHook;
+
     public EventWatcher(Configuration config, MessageManager msg)
     {
         this.config = config;
@@ -60,7 +68,6 @@ public unsafe class EventWatcher : IDisposable
         Plugin.Condition.ConditionChange += OnConditionChange;
         Plugin.ChatGui.ChatMessage += OnChatMessage;
         Plugin.Framework.Update += OnFrameworkUpdate;
-        Plugin.FlyTextGui.FlyTextCreated += OnFlyText;
 
         RegisterAddonListeners();
         SetupHooks();
@@ -80,12 +87,14 @@ public unsafe class EventWatcher : IDisposable
         Plugin.Condition.ConditionChange -= OnConditionChange;
         Plugin.ChatGui.ChatMessage -= OnChatMessage;
         Plugin.Framework.Update -= OnFrameworkUpdate;
-        Plugin.FlyTextGui.FlyTextCreated -= OnFlyText;
 
         UnregisterAddonListeners();
 
         updateGearsetHook?.Disable();
         updateGearsetHook?.Dispose();
+
+        actionEffectHook?.Disable();
+        actionEffectHook?.Dispose();
     }
 
     private void SetupHooks()
@@ -113,6 +122,17 @@ public unsafe class EventWatcher : IDisposable
             {
                 Plugin.Log.Error(ex, "Failed to hook UpdateGearset via both sig scan and MemberFunctionPointers");
             }
+        }
+
+        try
+        {
+            actionEffectHook = Plugin.GameInterop.HookFromSignature<ReceiveActionEffectDelegate>(
+                ActionEffectHandler.Addresses.Receive.String, ReceiveActionEffectDetour);
+            actionEffectHook.Enable();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "Failed to hook ReceiveActionEffect");
         }
     }
 
@@ -442,40 +462,59 @@ public unsafe class EventWatcher : IDisposable
         }
     }
 
-    private void OnFlyText(
-        ref FlyTextKind kind,
-        ref int val1,
-        ref int val2,
-        ref SeString text1,
-        ref SeString text2,
-        ref uint color,
-        ref uint icon,
-        ref uint damageTypeIcon,
-        ref float yOffset,
-        ref bool handled)
+    private unsafe void ReceiveActionEffectDetour(
+        uint casterEntityId, Character* casterPtr, Vector3* targetPos,
+        ActionEffectHandler.Header* header, ActionEffectHandler.TargetEffects* effects,
+        GameObjectId* targetEntityIds)
     {
-        if (!config.Enabled || !config.Outburst) return;
+        actionEffectHook!.Original(casterEntityId, casterPtr, targetPos, header, effects, targetEntityIds);
 
-        if (config.OutCritDh &&
-            (kind == FlyTextKind.DamageCritDh ||
-             kind == FlyTextKind.DamageCrit ||
-             kind == FlyTextKind.AutoAttackOrDotCritDh ||
-             kind == FlyTextKind.AutoAttackOrDotCrit))
+        try
         {
-            msg.Send(MessageCategory.Outburst, DialoguePool.OutCritDh);
-        }
+            if (!config.Enabled || !config.Outburst || header->NumTargets == 0)
+                return;
 
-        if ((config.OutHealCrit && kind == FlyTextKind.HealingCrit) ||
-            (config.OutHealOther && (kind == FlyTextKind.Healing || kind == FlyTextKind.HealingCrit)))
-        {
-            var localPlayer = Plugin.ObjectTable.LocalPlayer;
-            if (localPlayer != null && HealerJobs.Contains(localPlayer.ClassJob.RowId))
+            var localPlayer = Plugin.ClientState.LocalPlayer;
+            if (localPlayer == null) return;
+            var myId = localPlayer.GameObjectId;
+            var isHealer = HealerJobs.Contains(localPlayer.ClassJob.RowId);
+
+            for (var i = 0; i < header->NumTargets; i++)
             {
-                if (config.OutHealCrit && kind == FlyTextKind.HealingCrit)
-                    msg.Send(MessageCategory.Outburst, DialoguePool.OutHealCrit);
-                if (config.OutHealOther)
-                    msg.Send(MessageCategory.Outburst, DialoguePool.OutHealOther);
+                var targetId = (uint)(targetEntityIds[i] & uint.MaxValue);
+
+                for (var j = 0; j < 8; j++)
+                {
+                    ref var eff = ref effects[i].Effects[j];
+                    if (eff.Type == 0) continue;
+
+                    var isCrit = (eff.Param0 & 0x20) == 0x20;
+                    var isDh = (eff.Param0 & 0x40) == 0x40;
+
+                    switch (eff.Type)
+                    {
+                        case 3:
+                        case 5:
+                        case 6:
+                            if (casterEntityId == myId && config.OutCritDh && (isCrit || isDh))
+                                msg.Send(MessageCategory.Outburst, DialoguePool.OutCritDh);
+                            break;
+
+                        case 4:
+                            if (casterEntityId != myId || !isHealer || targetId == myId)
+                                break;
+                            if (config.OutHealCrit && isCrit)
+                                msg.Send(MessageCategory.Outburst, DialoguePool.OutHealCrit);
+                            if (config.OutHealOther)
+                                msg.Send(MessageCategory.Outburst, DialoguePool.OutHealOther);
+                            break;
+                    }
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "Error in ReceiveActionEffect detour");
         }
     }
 
