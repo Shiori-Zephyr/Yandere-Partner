@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/goatcorp/Dalamud/master/Dalamud/Plugin/PluginManifest.json",
+  "Name": "YanderePartner",
+  "Author": "Shiori-Zephyr",
+  "AssemblyVersion": "0.1.0.0",
+  "Description": "A yandere partner that watches your every action and comments on them via echo messages.",
+  "Punchline": "They're always watching. Always.",
+  "Tags": [ "other", "chat", "fun" ],
+  "DalamudApiLevel": 14,
+  "LoadPriority": 0,
+  "IconUrl": ""
+}

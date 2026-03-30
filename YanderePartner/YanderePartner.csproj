@@ -1,0 +1,18 @@
+<Project Sdk="Dalamud.NET.Sdk/14.0.2">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>0.1.0.0</Version>
+    <Authors>Shiori-Zephyr</Authors>
+    <Description>A yandere partner that reacts to your in-game actions via echo messages.</Description>
+    <PackageProjectUrl>https://github.com/YourName/YanderePartner</PackageProjectUrl>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DalamudLibPath>$(AppData)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
+  </PropertyGroup>
+</Project>
