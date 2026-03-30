@@ -488,22 +488,20 @@ public unsafe class EventWatcher : IDisposable
                     ref var eff = ref effects[i].Effects[j];
                     if (eff.Type == 0) continue;
 
-                    var isCrit = (eff.Param0 & 0x20) == 0x20;
-                    var isDh = (eff.Param0 & 0x40) == 0x40;
-
                     switch (eff.Type)
                     {
                         case 3:
                         case 5:
                         case 6:
-                            if (casterEntityId == myId && config.OutCritDh && (isCrit || isDh))
+                            if (casterEntityId == myId && config.OutCritDh &&
+                                ((eff.Param0 & 0x20) == 0x20 || (eff.Param0 & 0x40) == 0x40))
                                 msg.Send(MessageCategory.Outburst, DialoguePool.OutCritDh);
                             break;
 
                         case 4:
                             if (casterEntityId != myId || !isHealer || targetId == myId)
                                 break;
-                            if (config.OutHealCrit && isCrit)
+                            if (config.OutHealCrit && (eff.Param1 & 0x20) == 0x20)
                                 msg.Send(MessageCategory.Outburst, DialoguePool.OutHealCrit);
                             if (config.OutHealOther)
                                 msg.Send(MessageCategory.Outburst, DialoguePool.OutHealOther);
