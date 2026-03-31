@@ -8,6 +8,7 @@ public class Configuration : IPluginConfiguration
     public int Version { get; set; } = 0;
     public bool Enabled = true;
     public bool PopupEnabled = true;
+    public bool Dissociation = false;
 
     public string PartnerName = "Yuno";
     public float MessageCooldown = 30f;

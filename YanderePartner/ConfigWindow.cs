@@ -87,6 +87,11 @@ public class ConfigWindow : Window, IDisposable
         var newPopup = DrawToggle("Popup Window", config.PopupEnabled);
         if (newPopup != config.PopupEnabled) { config.PopupEnabled = newPopup; save(); }
 
+        var newDissoc = DrawToggle("Dissociation", config.Dissociation);
+        if (newDissoc != config.Dissociation) { config.Dissociation = newDissoc; save(); }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("She starts to lose coherence when you\ndon't give her anything to react to.");
+
         ImGui.Separator();
 
         ImGui.SetNextItemWidth(250);
