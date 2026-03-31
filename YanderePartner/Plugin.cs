@@ -26,6 +26,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly Configuration config;
     private readonly WindowSystem windowSystem = new("YanderePartner");
     private readonly ConfigWindow configWindow;
+    private readonly PopupWindow popupWindow;
     private readonly MessageManager messageManager;
     private readonly EventWatcher eventWatcher;
 
@@ -35,12 +36,18 @@ public sealed class Plugin : IDalamudPlugin
 
         messageManager = new MessageManager(config);
 
+        popupWindow = new PopupWindow(config);
+        windowSystem.AddWindow(popupWindow);
+        messageManager.SetPopupWindow(popupWindow);
+
         configWindow = new ConfigWindow(config, SaveConfig);
         windowSystem.AddWindow(configWindow);
 
         PluginInterface.UiBuilder.Draw += windowSystem.Draw;
         PluginInterface.UiBuilder.OpenConfigUi += () => configWindow.IsOpen = true;
         PluginInterface.UiBuilder.OpenMainUi += () => configWindow.IsOpen = true;
+
+        Framework.Update += OnFrameworkUpdate;
 
         CommandManager.AddHandler("/yandere", new CommandInfo(OnCommand)
         {
@@ -56,6 +63,11 @@ public sealed class Plugin : IDalamudPlugin
         configWindow.IsOpen ^= true;
     }
 
+    private void OnFrameworkUpdate(IFramework fw)
+    {
+        popupWindow.Update();
+    }
+
     private void SaveConfig()
     {
         PluginInterface.SavePluginConfig(config);
@@ -64,9 +76,11 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         eventWatcher.Dispose();
+        Framework.Update -= OnFrameworkUpdate;
         CommandManager.RemoveHandler("/yandere");
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
         windowSystem.RemoveAllWindows();
         configWindow.Dispose();
+        popupWindow.Dispose();
     }
 }

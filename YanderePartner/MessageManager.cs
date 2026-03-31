@@ -18,6 +18,7 @@ public class MessageManager
 {
     private readonly Configuration config;
     private readonly Dictionary<MessageCategory, long> categoryCooldowns = new();
+    private PopupWindow? popupWindow;
 
     public MessageManager(Configuration config)
     {
@@ -25,6 +26,8 @@ public class MessageManager
         foreach (var cat in Enum.GetValues<MessageCategory>())
             categoryCooldowns[cat] = 0;
     }
+
+    public void SetPopupWindow(PopupWindow window) => popupWindow = window;
 
     public bool IsOnCooldown(MessageCategory category)
     {
@@ -54,6 +57,8 @@ public class MessageManager
             Type = XivChatType.Echo,
             Message = msg,
         });
+
+        popupWindow?.QueueMessage(line, category);
 
         Plugin.Log.Debug($"[YanderePartner] [{category}] {name}{separator}{line}");
         return true;

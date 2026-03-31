@@ -83,6 +83,10 @@ public class ConfigWindow : Window, IDisposable
     {
         var newEnabled = DrawToggle("Enable Yandere Partner", config.Enabled);
         if (newEnabled != config.Enabled) { config.Enabled = newEnabled; save(); }
+
+        var newPopup = DrawToggle("Popup Window", config.PopupEnabled);
+        if (newPopup != config.PopupEnabled) { config.PopupEnabled = newPopup; save(); }
+
         ImGui.Separator();
 
         ImGui.SetNextItemWidth(250);
