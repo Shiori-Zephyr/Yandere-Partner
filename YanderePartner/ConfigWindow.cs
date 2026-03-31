@@ -116,6 +116,7 @@ public class ConfigWindow : Window, IDisposable
             DrawCheck("Duty Finder pop", ref config.PosCfPop);
             DrawCheck("Duty started", ref config.PosDutyStarted);
             DrawCheck("Repair request (player)", ref config.PosRepairRequest);
+            DrawCheck("Emote received (from others)", ref config.PosEmoteReceived);
         });
 
         DrawCategory("Evaluation (Idealize / Devalue)", ref config.Evaluation, () =>
@@ -140,6 +141,9 @@ public class ConfigWindow : Window, IDisposable
             DrawCheck("Glamour plate", ref config.SurGlamour);
             DrawCheck("Summoning bell", ref config.SurSummoningBell);
             DrawCheck("Retainer sale", ref config.SurRetainerSale);
+            DrawCheck("Cutscene", ref config.SurCutscene);
+            DrawCheck("Triple Triad result", ref config.SurTripleTriad);
+            DrawCheck("Weather change", ref config.SurWeatherChange);
         });
 
         DrawCategory("Emotional Outburst", ref config.Outburst, () =>
@@ -158,6 +162,10 @@ public class ConfigWindow : Window, IDisposable
             DrawCheck("Chocobo Racing", ref config.SpcChocoboRacing);
             DrawCheck("Grand Company turn-in", ref config.SpcGcTurnin);
             DrawCheck("Levequest", ref config.SpcLeve);
+            DrawCheck("Island Sanctuary", ref config.SpcIslandSanctuary);
+            DrawCheck("Cosmic Exploration", ref config.SpcCosmicExploration);
+            DrawCheck("FC Workshop", ref config.SpcFCWorkshop);
+            DrawCheck("Spectral current (ocean fishing)", ref config.SpcSpectralCurrent);
         });
 
         DrawCategory("Equipment", ref config.Equipment, () =>

@@ -25,6 +25,7 @@ public class Configuration : IPluginConfiguration
     public bool PosCfPop = true;
     public bool PosDutyStarted = true;
     public bool PosRepairRequest = true;
+    public bool PosEmoteReceived = true;
 
     public bool Evaluation = true;
     public bool EvaDutyCompleted = true;
@@ -45,6 +46,9 @@ public class Configuration : IPluginConfiguration
     public bool SurGlamour = true;
     public bool SurSummoningBell = true;
     public bool SurRetainerSale = true;
+    public bool SurCutscene = true;
+    public bool SurTripleTriad = true;
+    public bool SurWeatherChange = true;
 
     public bool Outburst = true;
     public bool OutPvpKill = false;
@@ -60,6 +64,10 @@ public class Configuration : IPluginConfiguration
     public bool SpcChocoboRacing = true;
     public bool SpcGcTurnin = true;
     public bool SpcLeve = true;
+    public bool SpcIslandSanctuary = true;
+    public bool SpcCosmicExploration = true;
+    public bool SpcFCWorkshop = true;
+    public bool SpcSpectralCurrent = true;
 
     public bool Equipment = true;
     public bool EqpLowDurability = true;

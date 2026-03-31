@@ -10,6 +10,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.Event;
 using FFXIVClientStructs.FFXIV.Client.Game.Fate;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using FFXIVClientStructs.FFXIV.Client.Graphics.Environment;
 using FFXIVClientStructs.FFXIV.Common.Math;
 using Lumina.Excel.Sheets;
 
@@ -38,6 +39,11 @@ public unsafe class EventWatcher : IDisposable
     private bool wasInFate;
     private bool wasInOceanFishing;
     private byte lastOceanZone;
+    private bool wasInCutscene;
+    private bool wasSpectralActive;
+    private bool wasInFCWorkshop;
+    private byte lastWeatherId;
+    private long weatherCooldownTimestamp;
 
     private delegate void UpdateGearsetDelegate(nint raptureGearsetModule, int gearsetId);
     private Hook<UpdateGearsetDelegate>? updateGearsetHook;
@@ -47,6 +53,12 @@ public unsafe class EventWatcher : IDisposable
         ActionEffectHandler.Header* header, ActionEffectHandler.TargetEffects* effects,
         GameObjectId* targetEntityIds);
     private Hook<ReceiveActionEffectDelegate>? actionEffectHook;
+
+    private delegate void OnEmoteFuncDelegate(ulong unk, ulong instigatorAddr, ushort emoteId, ulong targetId, ulong unk2);
+    private Hook<OnEmoteFuncDelegate>? emoteHook;
+
+    static readonly HashSet<ushort> AffectionateEmotes = [105, 68, 42, 64, 49];
+    // hug=105, pet=68, embrace=42, blowkiss=64, dote=49
 
     public EventWatcher(Configuration config, MessageManager msg)
     {
@@ -95,6 +107,9 @@ public unsafe class EventWatcher : IDisposable
 
         actionEffectHook?.Disable();
         actionEffectHook?.Dispose();
+
+        emoteHook?.Disable();
+        emoteHook?.Dispose();
     }
 
     private void SetupHooks()
@@ -134,6 +149,17 @@ public unsafe class EventWatcher : IDisposable
         {
             Plugin.Log.Error(ex, "Failed to hook ReceiveActionEffect");
         }
+
+        try
+        {
+            emoteHook = Plugin.GameInterop.HookFromSignature<OnEmoteFuncDelegate>(
+                "E8 ?? ?? ?? ?? 48 8D 8B ?? ?? ?? ?? 4C 89 74 24", OnEmoteDetour);
+            emoteHook.Enable();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "Failed to hook OnEmote");
+        }
     }
 
     private void RegisterAddonListeners()
@@ -144,6 +170,7 @@ public unsafe class EventWatcher : IDisposable
         Plugin.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "MiragePrismMiragePlate", OnAddonGlamour);
         Plugin.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "RaceChocoboResult", OnAddonRaceResult);
         Plugin.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "Repair", OnAddonRepairClose);
+        Plugin.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "TripleTriadResult", OnAddonTripleTriadResult);
     }
 
     private void UnregisterAddonListeners()
@@ -154,6 +181,7 @@ public unsafe class EventWatcher : IDisposable
         Plugin.AddonLifecycle.UnregisterListener(OnAddonGlamour);
         Plugin.AddonLifecycle.UnregisterListener(OnAddonRaceResult);
         Plugin.AddonLifecycle.UnregisterListener(OnAddonRepairClose);
+        Plugin.AddonLifecycle.UnregisterListener(OnAddonTripleTriadResult);
     }
 
     private void PollJobChange()
@@ -193,14 +221,30 @@ public unsafe class EventWatcher : IDisposable
         }
     }
 
+    static readonly HashSet<ushort> CosmicTerritories = [1237, 1291, 1310];
+    static readonly HashSet<ushort> IslandSanctuaryTerritories = [1055];
+
     private void OnTerritoryChanged(ushort territory)
     {
         if (config.SeparationAnxiety && config.SepTerritoryChanged && territory != lastTerritory)
             msg.Send(MessageCategory.SeparationAnxiety, DialoguePool.SepTerritoryChanged);
 
+        if (config.SpecialContent && territory != lastTerritory)
+        {
+            if (config.SpcIslandSanctuary && IslandSanctuaryTerritories.Contains(territory)
+                && !IslandSanctuaryTerritories.Contains(lastTerritory))
+                msg.Send(MessageCategory.SpecialContent, DialoguePool.SpcIslandSanctuary);
+
+            if (config.SpcCosmicExploration && CosmicTerritories.Contains(territory)
+                && !CosmicTerritories.Contains(lastTerritory))
+                msg.Send(MessageCategory.SpecialContent, DialoguePool.SpcCosmicExploration);
+        }
+
         lastTerritory = territory;
         durabilityWarned = false;
         spiritbondWarned = false;
+        lastWeatherId = 0;
+        weatherCooldownTimestamp = 0;
     }
 
     private void OnLogout(int type, int code)
@@ -286,6 +330,12 @@ public unsafe class EventWatcher : IDisposable
             case ConditionFlag.ChocoboRacing when value && !wasChocoboRacing && config.SpecialContent && config.SpcChocoboRacing:
                 msg.Send(MessageCategory.SpecialContent, DialoguePool.SpcChocoboRacing);
                 break;
+            case ConditionFlag.WatchingCutscene when value && !wasInCutscene && config.Surveillance && config.SurCutscene:
+            case ConditionFlag.WatchingCutscene78 when value && !wasInCutscene && config.Surveillance && config.SurCutscene:
+            case ConditionFlag.OccupiedInCutSceneEvent when value && !wasInCutscene && config.Surveillance && config.SurCutscene:
+                wasInCutscene = true;
+                msg.Send(MessageCategory.Surveillance, DialoguePool.SurCutscene);
+                break;
         }
 
         switch (flag)
@@ -294,6 +344,15 @@ public unsafe class EventWatcher : IDisposable
             case ConditionFlag.Crafting: wasCrafting = value; break;
             case ConditionFlag.InDeepDungeon: wasInDeepDungeon = value; break;
             case ConditionFlag.ChocoboRacing: wasChocoboRacing = value; break;
+            case ConditionFlag.WatchingCutscene:
+            case ConditionFlag.WatchingCutscene78:
+            case ConditionFlag.OccupiedInCutSceneEvent:
+                if (!value
+                    && !Plugin.Condition[ConditionFlag.WatchingCutscene]
+                    && !Plugin.Condition[ConditionFlag.WatchingCutscene78]
+                    && !Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent])
+                    wasInCutscene = false;
+                break;
         }
     }
 
@@ -344,6 +403,8 @@ public unsafe class EventWatcher : IDisposable
         PollFate();
         PollEquipmentDurability();
         PollOceanFishing();
+        PollFCWorkshop();
+        PollWeather();
     }
 
     private void PollPartyChange()
@@ -435,30 +496,43 @@ public unsafe class EventWatcher : IDisposable
 
     private void PollOceanFishing()
     {
-        if (!config.SpecialContent || !config.SpcOceanFishing) return;
+        if (!config.SpecialContent) return;
 
         var oceanFishing = EventFramework.Instance()->GetInstanceContentOceanFishing();
         if (oceanFishing != null)
         {
-            if (!wasInOceanFishing)
+            if (config.SpcOceanFishing)
             {
-                wasInOceanFishing = true;
-                msg.Send(MessageCategory.SpecialContent, DialoguePool.SpcOceanFishingEnter);
-                lastOceanZone = (byte)oceanFishing->CurrentZone;
+                if (!wasInOceanFishing)
+                {
+                    wasInOceanFishing = true;
+                    msg.Send(MessageCategory.SpecialContent, DialoguePool.SpcOceanFishingEnter);
+                    lastOceanZone = (byte)oceanFishing->CurrentZone;
+                }
+                else
+                {
+                    var currentZone = (byte)oceanFishing->CurrentZone;
+                    if (currentZone != lastOceanZone)
+                    {
+                        lastOceanZone = currentZone;
+                        msg.Send(MessageCategory.SpecialContent, DialoguePool.SpcOceanFishingZone);
+                    }
+                }
             }
             else
             {
-                var currentZone = (byte)oceanFishing->CurrentZone;
-                if (currentZone != lastOceanZone)
-                {
-                    lastOceanZone = currentZone;
-                    msg.Send(MessageCategory.SpecialContent, DialoguePool.SpcOceanFishingZone);
-                }
+                wasInOceanFishing = true;
             }
+
+            var spectral = oceanFishing->SpectralCurrentActive;
+            if (spectral && !wasSpectralActive && config.SpcSpectralCurrent)
+                msg.Send(MessageCategory.SpecialContent, DialoguePool.SpcSpectralCurrent);
+            wasSpectralActive = spectral;
         }
         else
         {
             wasInOceanFishing = false;
+            wasSpectralActive = false;
         }
     }
 
@@ -551,5 +625,133 @@ public unsafe class EventWatcher : IDisposable
     {
         if (config.Equipment && config.EqpRepair)
             msg.Send(MessageCategory.Equipment, DialoguePool.EqpRepair);
+    }
+
+    private unsafe void OnAddonTripleTriadResult(AddonEvent type, AddonArgs args)
+    {
+        if (!config.Surveillance || !config.SurTripleTriad) return;
+
+        try
+        {
+            var addonPtr = Plugin.GameGui_.GetAddonByName("TripleTriadResult");
+            if (addonPtr.Address == nint.Zero) return;
+            var baseNode = (FFXIVClientStructs.FFXIV.Component.GUI.AtkUnitBase*)addonPtr.Address;
+
+            var rootNode = baseNode->RootNode;
+            if (rootNode == null) return;
+
+            var child = rootNode->ChildNode;
+            var idx = 0;
+            FFXIVClientStructs.FFXIV.Component.GUI.AtkResNode* resultNode = null;
+            while (child != null)
+            {
+                if (idx == 9) { resultNode = child; break; }
+                child = child->PrevSiblingNode;
+                idx++;
+            }
+            if (resultNode == null) return;
+
+            var resultChild = resultNode->ChildNode;
+            FFXIVClientStructs.FFXIV.Component.GUI.AtkResNode* nodeDraw = null;
+            FFXIVClientStructs.FFXIV.Component.GUI.AtkResNode* nodeLose = null;
+            FFXIVClientStructs.FFXIV.Component.GUI.AtkResNode* nodeWin = null;
+            var ri = 0;
+            while (resultChild != null)
+            {
+                switch (ri)
+                {
+                    case 0: nodeDraw = resultChild; break;
+                    case 1: nodeLose = resultChild; break;
+                    case 2: nodeWin = resultChild; break;
+                }
+                resultChild = resultChild->PrevSiblingNode;
+                ri++;
+            }
+
+            if (nodeWin != null && nodeWin->IsVisible())
+                msg.Send(MessageCategory.Surveillance, DialoguePool.SurTripleTriadWin);
+            else if (nodeLose != null && nodeLose->IsVisible())
+                msg.Send(MessageCategory.Surveillance, DialoguePool.SurTripleTriadLose);
+            else if (nodeDraw != null && nodeDraw->IsVisible())
+                msg.Send(MessageCategory.Surveillance, DialoguePool.SurTripleTriadDraw);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "Error reading TripleTriadResult addon");
+        }
+    }
+
+    private void OnEmoteDetour(ulong unk, ulong instigatorAddr, ushort emoteId, ulong targetId, ulong unk2)
+    {
+        emoteHook!.Original(unk, instigatorAddr, emoteId, targetId, unk2);
+
+        try
+        {
+            if (!config.Enabled || !config.Possessiveness || !config.PosEmoteReceived) return;
+
+            var localPlayer = Plugin.ClientState.LocalPlayer;
+            if (localPlayer == null || targetId != localPlayer.GameObjectId) return;
+
+            var instigator = Plugin.ObjectTable.FirstOrDefault(x => (ulong)x.Address == instigatorAddr);
+            if (instigator == null || instigator is not Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter)
+                return;
+            if (instigator.GameObjectId == localPlayer.GameObjectId) return;
+
+            if (AffectionateEmotes.Contains(emoteId))
+                msg.Send(MessageCategory.Possessiveness, DialoguePool.PosEmoteReceivedAffectionate);
+            else
+                msg.Send(MessageCategory.Possessiveness, DialoguePool.PosEmoteReceivedHostile);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "Error in OnEmote detour");
+        }
+    }
+
+    private unsafe void PollFCWorkshop()
+    {
+        if (!config.SpecialContent || !config.SpcFCWorkshop) return;
+
+        var housing = HousingManager.Instance();
+        if (housing == null) return;
+
+        var inWorkshop = housing->WorkshopTerritory != null
+            && !IslandSanctuaryTerritories.Contains(Plugin.ClientState.TerritoryType);
+
+        if (inWorkshop && !wasInFCWorkshop)
+            msg.Send(MessageCategory.SpecialContent, DialoguePool.SpcFCWorkshop);
+        wasInFCWorkshop = inWorkshop;
+    }
+
+    private unsafe void PollWeather()
+    {
+        if (!config.Surveillance || !config.SurWeatherChange) return;
+
+        var env = EnvManager.Instance();
+        if (env == null) return;
+
+        var weatherId = env->ActiveWeather;
+        if (weatherId == lastWeatherId)
+            return;
+
+        var wasUninitialized = lastWeatherId == 0;
+        lastWeatherId = weatherId;
+
+        if (weatherId <= 3) return;
+
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        if (!wasUninitialized && now - weatherCooldownTimestamp < 20 * 60 * 1000) return;
+        weatherCooldownTimestamp = now;
+
+        string[] pool = weatherId switch
+        {
+            7 or 8 => DialoguePool.SurWeatherRain,
+            9 or 10 or 11 or 12 => DialoguePool.SurWeatherStorm,
+            4 or 5 or 6 => DialoguePool.SurWeatherFog,
+            15 or 16 => DialoguePool.SurWeatherSnow,
+            _ => DialoguePool.SurWeatherOther,
+        };
+
+        msg.Send(MessageCategory.Surveillance, pool);
     }
 }

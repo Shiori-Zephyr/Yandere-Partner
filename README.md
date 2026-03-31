@@ -22,3 +22,8 @@ This plugin grabs few tricks from the following projects:
 - RebornToolbox
 - SimpleTweaksPlugin
 - PalacePal
+- EmoteLog
+- Saucy
+- Ices-Cosmic-Exploration
+- Explorers-Icebox
+- SubmarineTracker
