@@ -404,7 +404,7 @@ public static class DialoguePool
         "That was meant for me. That gesture. It was supposed to be mine.",
         "You let them do that. You just stood there and let them.",
         "Who said they could do that. WHO.",
-        "I saw your character model. It reacted. You liked it.",
+        "Yesgreatbrillantwowexcellentomg",
     ];
 
     public static readonly string[] PosEmoteReceivedHostile =
@@ -416,9 +416,9 @@ public static class DialoguePool
 
     public static readonly string[] SurCutscene =
     [
-        "You're watching something without me.",
+        "We wait. We are bored. (He throws up his hand.) No, don't protest, we are bored to death, there's no denying it. Good. A diversion comes along and what do we do? We let it go to waste. Come, let's get to work! (He advances towards the heap, stops in his stride.) In an instant all will vanish and we'll be alone more, in the midst of nothingness!",
         "I can't skip this for you. I can't do anything for you.",
-        "Your eyes are on the screen. Not on me. On a script someone else wrote.",
+        "Let us do something, while we have the chance!",
         "What's happening in there? Who are you looking at? Are they pretty?",
         "Don't cry. Or cry. Just tell me why after.",
     ];
@@ -426,21 +426,21 @@ public static class DialoguePool
     public static readonly string[] SurTripleTriadWin =
     [
         "You won. You actually—you won. Say it again. Say you won.",
-        "The cards fell right. Everything falls right for you except us.",
+        "HoOray!",
         "Winner. My winner. Even if you won't say it.",
     ];
 
     public static readonly string[] SurTripleTriadLose =
     [
         "You lost. It's fine. It's fine it's fine it's fine.",
-        "They took your cards? I'll get them back. I don't know how but I will.",
+        "They took your cards? This is not some RE of the greatest game in the world. ",
         "Losing suits you. It makes you need me more.",
     ];
 
     public static readonly string[] SurTripleTriadDraw =
     [
         "A draw. How unsatisfying. Like everything between us.",
-        "Nobody won. Nobody lost. That's the worst outcome.",
+        "Old endgame, lost of old, play and lose and have done with losing.",
     ];
 
     public static readonly string[] SpcIslandSanctuary =
@@ -454,9 +454,7 @@ public static class DialoguePool
 
     public static readonly string[] SpcCosmicExploration =
     [
-        "The moon. You went to the moon to get away from me.",
-        "I can't follow you up there. You know that, right? You know that.",
-        "Stellar missions. You're reaching for stars and I'm right here.",
+        "The moon and the stars. We should buy our own spaceship.",
         "How far do you have to go before you feel far enough from me?",
         "Space. The final frontier for running away.",
     ];
@@ -471,54 +469,54 @@ public static class DialoguePool
 
     public static readonly string[] SpcSpectralCurrent =
     [
-        "The sea is glowing. Even the ocean puts on a show for you.",
+        "Hold me tight.",
         "Spectral current. Everyone's excited. You're excited. For fish.",
         "The water changed. You changed. Everything changes except how I feel.",
     ];
 
     public static readonly string[] SurWeatherRain =
     [
-        "It's raining. I hope you get soaked.",
+        "It's raining. Why not snakes and aubergines?",
         "Rain. You're just going to stand in it, aren't you. You never bring an umbrella. You never prepare for anything.",
         "The rain sounds like static. Like the inside of my head when you don't answer me.",
         "Wet. Everything is wet. I had a dream about you last week and I can't get it out of my—anyway it's raining.",
         "Do you think about me when it rains? I think about you when it does anything.",
-        "Perfect weather for standing still and feeling sorry for yourself. Not that I'd know.",
+        "We can kiss in the rain like every movie cliches.",
     ];
 
     public static readonly string[] SurWeatherStorm =
     [
-        "Thunder. My heart does that when you look at someone else.",
-        "Lightning outside. I feel electric too. You don't care.",
+        "Thunder. You are not leaving.",
+        "BANG, nonono I hate that song.",
         "The sky is screaming. I get it.",
-        "Storm. Good. I hope it scares you. I hope you come running to me. You won't.",
-        "I counted the seconds between the flash and the sound. I count a lot of things you don't know about.",
+        "Storm. I had a sister called... ykw forget it.",
+        "Wooooooooow!",
     ];
 
     public static readonly string[] SurWeatherFog =
     [
-        "I can't see you properly. The fog.",
-        "Fog. You could disappear right now and I wouldn't know until it cleared.",
-        "Everything is blurry. Like trying to read your intentions.",
+        "Foggy, foggy. Frog. So frog is grown adult, how sad.",
+        "Fog. You are not going to cross it, right.",
+        "Everything is blurry. But I am still here.",
         "You look like a ghost in this. Maybe you are one. Maybe I made you up.",
-        "I once wrote your name in fog on a window. It disappeared. Obviously.",
+        "Too bad I don't need SPF50+ today.",
     ];
 
     public static readonly string[] SurWeatherSnow =
     [
-        "Snow. You look cold. I could fix that but you'd never ask.",
-        "It's snowing. Each flake is unique, they say. Like every excuse you give me.",
-        "White everywhere. Clean. Nothing between us is clean.",
+        "Snow. I wish we can go to Hokkaido this summer.",
+        "It's snowing. Each flake is unique, they say. Like every moment you give me.",
+        "White everywhere. Clean. Hug me, now.",
         "I caught a snowflake. It melted. Everything I hold does that.",
-        "You're going to get sick. You always get sick. And then who takes care of you? Not me. Never me.",
+        "You're going to get sick. You always get sick. Don't worry you can count on me.",
     ];
 
     public static readonly string[] SurWeatherOther =
     [
         "The sky looks different. Did you notice? You never notice.",
-        "The weather changed. I didn't. I'm still here.",
+        "Books! Old and new.",
         "What's happening up there doesn't matter. What's happening between us matters. But you don't think so.",
-        "Interesting sky. I bet you screenshot it. I bet you show someone. Not me.",
-        "I had something I wanted to tell you but the weather distracted me. No. You distracted me. The weather is just weather.",
+        "Finished, it's finished, nearly finished, it must be nearly finished.",
+        "I had something I wanted to tell you but the weather distracted me. No. I will tell you tomorrow. I suppoese. And the weather is just weather.",
     ];
 }
