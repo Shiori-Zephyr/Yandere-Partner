@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>0.1.0.0</Version>
+    <Version>0.1.0.1</Version>
     <Authors>Shiori-Zephyr</Authors>
     <Description>A yandere partner that reacts to your in-game actions via echo messages.</Description>
     <PackageProjectUrl>https://github.com/YourName/YanderePartner</PackageProjectUrl>
