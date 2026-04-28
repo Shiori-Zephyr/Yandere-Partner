@@ -6,7 +6,7 @@
   "Description": "A yandere partner that watches your every action and comments on them via echo messages.",
   "Punchline": "They're always watching. Always.",
   "Tags": [ "other", "chat", "fun" ],
-  "DalamudApiLevel": 14,
+  "DalamudApiLevel": 15,
   "LoadPriority": 0,
   "IconUrl": ""
 }

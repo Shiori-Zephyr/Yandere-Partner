@@ -1,6 +1,8 @@
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Game.Chat;
 using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.DutyState;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Hooking;
@@ -33,7 +35,7 @@ public unsafe class EventWatcher : IDisposable
     private bool durabilityWarned;
     private bool spiritbondWarned;
     private int lastPartyCount;
-    private ushort lastTerritory;
+    private uint lastTerritory;
     private byte lastClassJobId;
     private long glamourTimestamp;
     private bool wasInFate;
@@ -125,7 +127,7 @@ public unsafe class EventWatcher : IDisposable
         {
             try
             {
-                var addr = (nint)FFXIVClientStructs.FFXIV.Client.UI.Misc.RaptureGearsetModule.MemberFunctionPointers.UpdateGearset;
+                var addr = (nint)FFXIVClientStructs.FFXIV.Client.UI.Misc.RaptureGearsetModule.MemberFunctionPointers.UpdateGearsetInternal;
                 if (addr != nint.Zero)
                 {
                     updateGearsetHook = Plugin.GameInterop.HookFromAddress<UpdateGearsetDelegate>(
@@ -221,10 +223,10 @@ public unsafe class EventWatcher : IDisposable
         }
     }
 
-    static readonly HashSet<ushort> CosmicTerritories = [1237, 1291, 1310];
-    static readonly HashSet<ushort> IslandSanctuaryTerritories = [1055];
+    static readonly HashSet<uint> CosmicTerritories = [1237, 1291, 1310];
+    static readonly HashSet<uint> IslandSanctuaryTerritories = [1055];
 
-    private void OnTerritoryChanged(ushort territory)
+    private void OnTerritoryChanged(uint territory)
     {
         if (config.SeparationAnxiety && config.SepTerritoryChanged && territory != lastTerritory)
             msg.Send(MessageCategory.SeparationAnxiety, DialoguePool.SepTerritoryChanged);
@@ -259,25 +261,25 @@ public unsafe class EventWatcher : IDisposable
             msg.Send(MessageCategory.Possessiveness, DialoguePool.PosCfPop);
     }
 
-    private void OnDutyStarted(object? sender, ushort territory)
+    private void OnDutyStarted(IDutyStateEventArgs args)
     {
         if (config.Possessiveness && config.PosDutyStarted)
             msg.Send(MessageCategory.Possessiveness, DialoguePool.PosDutyStarted);
     }
 
-    private void OnDutyCompleted(object? sender, ushort territory)
+    private void OnDutyCompleted(IDutyStateEventArgs args)
     {
         if (config.Evaluation && config.EvaDutyCompleted)
             msg.Send(MessageCategory.Evaluation, DialoguePool.EvaDutyCompleted);
     }
 
-    private void OnDutyWiped(object? sender, ushort territory)
+    private void OnDutyWiped(IDutyStateEventArgs args)
     {
         if (config.Evaluation && config.EvaDutyWiped)
             msg.Send(MessageCategory.Evaluation, DialoguePool.EvaDutyWiped);
     }
 
-    private void OnDutyRecommenced(object? sender, ushort territory)
+    private void OnDutyRecommenced(IDutyStateEventArgs args)
     {
         if (config.Evaluation && config.EvaDutyRecommenced)
             msg.Send(MessageCategory.Evaluation, DialoguePool.EvaDutyRecommenced);
@@ -356,12 +358,11 @@ public unsafe class EventWatcher : IDisposable
         }
     }
 
-    private void OnChatMessage(XivChatType type, int timestamp,
-        ref SeString sender, ref SeString message, ref bool isHandled)
+    private void OnChatMessage(IHandleableChatMessage chatMsg)
     {
         if (!config.Enabled) return;
 
-        switch (type)
+        switch (chatMsg.LogKind)
         {
             case XivChatType.TellIncoming when config.Possessiveness && config.PosTellReceived:
                 msg.Send(MessageCategory.Possessiveness, DialoguePool.PosTellReceived);
@@ -382,8 +383,8 @@ public unsafe class EventWatcher : IDisposable
             var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             if (now - glamourTimestamp < 3000) return;
 
-            var text = message.TextValue;
-            var hasItem = message.Payloads.Any(p => p is Dalamud.Game.Text.SeStringHandling.Payloads.ItemPayload);
+            var text = chatMsg.Message.TextValue;
+            var hasItem = chatMsg.Message.Payloads.Any(p => p is Dalamud.Game.Text.SeStringHandling.Payloads.ItemPayload);
             if (hasItem && (text.Contains("obtain") || text.Contains("added to the loot list") ||
                             text.Contains("を手に入れた") || text.Contains("に入りました")))
             {
