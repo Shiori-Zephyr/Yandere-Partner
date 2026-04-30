@@ -127,7 +127,7 @@ public unsafe class EventWatcher : IDisposable
         {
             try
             {
-                var addr = (nint)FFXIVClientStructs.FFXIV.Client.UI.Misc.RaptureGearsetModule.MemberFunctionPointers.UpdateGearsetInternal;
+                var addr = (nint)FFXIVClientStructs.FFXIV.Client.UI.Misc.RaptureGearsetModule.MemberFunctionPointers.UpdateGearset;
                 if (addr != nint.Zero)
                 {
                     updateGearsetHook = Plugin.GameInterop.HookFromAddress<UpdateGearsetDelegate>(
@@ -549,7 +549,7 @@ public unsafe class EventWatcher : IDisposable
             if (!config.Enabled || !config.Outburst || header->NumTargets == 0)
                 return;
 
-            var localPlayer = Plugin.ClientState.LocalPlayer;
+            var localPlayer = Plugin.ObjectTable.LocalPlayer;
             if (localPlayer == null) return;
             var myId = localPlayer.GameObjectId;
             var isHealer = HealerJobs.Contains(localPlayer.ClassJob.RowId);
@@ -690,7 +690,7 @@ public unsafe class EventWatcher : IDisposable
         {
             if (!config.Enabled || !config.Possessiveness || !config.PosEmoteReceived) return;
 
-            var localPlayer = Plugin.ClientState.LocalPlayer;
+            var localPlayer = Plugin.ObjectTable.LocalPlayer;
             if (localPlayer == null || targetId != localPlayer.GameObjectId) return;
 
             var instigator = Plugin.ObjectTable.FirstOrDefault(x => (ulong)x.Address == instigatorAddr);

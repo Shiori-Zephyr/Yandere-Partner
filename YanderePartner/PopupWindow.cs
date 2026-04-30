@@ -60,7 +60,7 @@ public class PopupWindow : Window, IDisposable
         hasPending = true;
     }
 
-    public void Update()
+    public new void Update()
     {
         if (!config.PopupEnabled || !hasPending)
             return;
